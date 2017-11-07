@@ -1,6 +1,7 @@
 /* 
  * tsh - A tiny shell program with job control
- * 
+ * 학번: 201602037
+ * 이름: 이 규정
  * <Put your name and login ID here>
  */
 #include <stdio.h>
