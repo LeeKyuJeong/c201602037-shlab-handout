@@ -169,12 +169,23 @@ int main(int argc, char **argv)
  */
 void eval(char *cmdline) 
 {
+	if(feof(stdin)){
+		fflush(stdout);
+		exit(0);
+	}
 	return;
 }
 
 int builtin_cmd(char **argv)
 {
+	char *cmd = argv[0];
+
+	if(!strcmp(cmd,"quit")){
+		exit(0);
+	}
+
 	return 0;
+
 }
 
 void waitfg(pid_t pid, int output_fd)
