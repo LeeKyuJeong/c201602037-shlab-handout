@@ -169,10 +169,9 @@ int main(int argc, char **argv)
  */
 void eval(char *cmdline) 
 {
-	if(feof(stdin)){
-		fflush(stdout);
-		exit(0);
-	}
+	char *argv[MAXARGS];
+	parseline(cmdline,argv);
+	builtin_cmd(argv);
 	return;
 }
 
