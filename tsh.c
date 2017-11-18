@@ -170,8 +170,18 @@ int main(int argc, char **argv)
 void eval(char *cmdline) 
 {
 	char *argv[MAXARGS];
+	pid_t pid;
+
 	parseline(cmdline,argv);
-	builtin_cmd(argv);
+	
+	if(!builtin_cmd(argv)){
+		if(){
+			if((execve(argv[0], argv, environ) < 0)){
+				printf("%s : Command not found\n",argv);
+				exit(0);
+			}
+		}
+	}
 	return;
 }
 
