@@ -174,8 +174,10 @@ void eval(char *cmdline)
 
 	parseline(cmdline,argv);
 	
+	pid = fork(); // fork 발생
+	// pid == 0 인경우 자식프로세스이다.
 	if(!builtin_cmd(argv)){
-		if(){
+		if(pid == 0){ // 자식프로세스 일 경우
 			if((execve(argv[0], argv, environ) < 0)){
 				printf("%s : Command not found\n",argv);
 				exit(0);
