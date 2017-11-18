@@ -170,16 +170,16 @@ int main(int argc, char **argv)
 void eval(char *cmdline) 
 {
 	char *argv[MAXARGS];
-	pid_t pid;
 
 	parseline(cmdline,argv);
-	
-	pid = fork(); // fork 발생
+	pid_t pid = fork();	
 	// pid == 0 인경우 자식프로세스이다.
+
 	if(!builtin_cmd(argv)){
 		if(pid == 0){ // 자식프로세스 일 경우
 			if((execve(argv[0], argv, environ) < 0)){
-				printf("%s : Command not found\n",argv);
+			// 	printf("%s : Command not found\n", argv);
+			//  위의 프린트문 작성시 실습자료와 똑같이 했는데도 오류가 발생하여 주석처리하였음.
 				exit(0);
 			}
 		}
