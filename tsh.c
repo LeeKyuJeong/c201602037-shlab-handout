@@ -183,6 +183,14 @@ void eval(char *cmdline)
 				exit(0);
 			}
 		}
+		// addjob() 함수를 이용하여 joblist 에 job 을 추가한다.
+		if(){ // foreground job 체크 
+			// waitpid() 함수를 사용하여, 자식프로세스가 종료될 때 까지 기다린다.	
+		}
+		else{ // background job 체크 
+			// 해당 작업의 정보를 출력하는 양식을 확인하고, 해당 양식에 맞추어 출력
+			// pid2jid() 함수를 이용해서 양식에 맞추어 출력
+		}
 	}
 	return;
 }
