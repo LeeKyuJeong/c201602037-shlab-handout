@@ -182,12 +182,23 @@ void eval(char *cmdline)
 			//  위의 프린트문 작성시 실습자료와 똑같이 했는데도 오류가 발생하여 주석처리하였음.
 				exit(0);
 			}
-		}
 		// addjob() 함수를 이용하여 joblist 에 job 을 추가한다.
 		if(){ // foreground job 체크 
+			addjob(jobs, pid, FG, cmdline);
+			int checkWait = waitpid(pid, &end , 0);
+			if(checkWait < 0){
+			}
+			deletejob(jobs, pid);
 			// waitpid() 함수를 사용하여, 자식프로세스가 종료될 때 까지 기다린다.	
+			// waitpid() 함수의 형식은 waitpid(pid_t pid, int* intz, int option) 이다. 
+			// pid 에는 종료를 기다릴 자식의 pid를 넣는것이고, option에는 상세한 waitpid의 작동방식을 넣는다.(보통 0)
+			// intz 에는 종료 상태를 저장할 위치의 포인터 값을 넣는다.
+			// 그리고 waitpid() 함수의 반환값은 성공 시 pid 반환, 실패시 -1을 반환해준다.
+			// 조건에서 자식 프로세스가 종료될 까지 기다리라고 하였으므로 wait가 성공하였을 경우 작업을 제거하도록 한다.
 		}
 		else{ // background job 체크 
+			addjob(jobs, pid, BG, cmdline);
+			printf("(%d) (%d) %s",pid2jid(pid), pid, cmdline);
 			// 해당 작업의 정보를 출력하는 양식을 확인하고, 해당 양식에 맞추어 출력
 			// pid2jid() 함수를 이용해서 양식에 맞추어 출력
 		}
