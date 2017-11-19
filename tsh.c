@@ -170,23 +170,34 @@ int main(int argc, char **argv)
 void eval(char *cmdline) 
 {
 	char *argv[MAXARGS];
-
-	parseline(cmdline,argv);
+	char buf[MAXLINE];
+	// 백그라운드 작업에서는 보통 맨 뒤의 입력창에 &를 입력해준다.
+	// 확인을 했을 경우, 그것의 값을 넣어주기 위한 int형 변수를 선언한다.
+	int bg;
+ 	
+	strcpy(buf, cmdline);
+	bg = parseline(buf, argv);
+	// parseline 에서는 마지막 인자가 '&' 이라면 1을 리턴한다. 그렇지 않으면 0을 반환한다.	
+	if(argv[0] == NULL)
+		return; 
+	// parseline에서 받아온 값을 저장한다.
 	pid_t pid = fork();	
 	// pid == 0 인경우 자식프로세스이다.
 
 	if(!builtin_cmd(argv)){
 		if(pid == 0){ // 자식프로세스 일 경우
 			if((execve(argv[0], argv, environ) < 0)){
-			// 	printf("%s : Command not found\n", argv);
-			//  위의 프린트문 작성시 실습자료와 똑같이 했는데도 오류가 발생하여 주석처리하였음.
+				printf("%s : Command not found\n", argv[0]);
 				exit(0);
 			}
+		}
 		// addjob() 함수를 이용하여 joblist 에 job 을 추가한다.
-		if(){ // foreground job 체크 
+		if(!bg){ // foreground job 체크 
+			int status;
 			addjob(jobs, pid, FG, cmdline);
-			int checkWait = waitpid(pid, &end , 0);
+			int checkWait = waitpid(pid, &status , 0);
 			if(checkWait < 0){
+				unix_error("error");
 			}
 			deletejob(jobs, pid);
 			// waitpid() 함수를 사용하여, 자식프로세스가 종료될 때 까지 기다린다.	
@@ -209,10 +220,15 @@ void eval(char *cmdline)
 int builtin_cmd(char **argv)
 {
 	char *cmd = argv[0];
-
+	
 	if(!strcmp(cmd,"quit")){
 		exit(0);
 	}
+
+	if(!strcmp(cmd, "&")){
+		return 1;
+	}
+	// quit 와 비슷하게 &를 찾도록 한다. 그리고 만약 찾으면 1을 반환하게 한다.
 
 	return 0;
 
@@ -557,4 +573,3 @@ void sigquit_handler(int sig)
 	printf("Terminating after receipt of SIGQUIT signal\n");
 	exit(1);
 }
-
