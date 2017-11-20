@@ -230,6 +230,13 @@ int builtin_cmd(char **argv)
 	}
 	// quit 와 비슷하게 &를 찾도록 한다. 그리고 만약 찾으면 1을 반환하게 한다.
 
+	// trace07도 quit 명령어를 구현 한 것과 비슷하게 작성하면 된다.
+	// 이때, 필요한 함수는 listjobs()로 작업 리스트를 출력해주는 함수이다.
+	if(!strcmp(cmd,"jobs")){
+		listjobs(jobs,1);
+		return 1;
+	}
+
 	return 0;
 
 }
