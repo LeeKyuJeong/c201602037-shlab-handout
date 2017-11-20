@@ -191,6 +191,10 @@ void eval(char *cmdline)
 				exit(0);
 			}
 		}
+		else if(pid < 0){ // 예외 처리 과정 (fork 로 프로세스 생성에 실패한 경우)
+			unix_error("fork error");
+		}
+
 		// addjob() 함수를 이용하여 joblist 에 job 을 추가한다.
 		if(!bg){ // foreground job 체크 
 			int status;
