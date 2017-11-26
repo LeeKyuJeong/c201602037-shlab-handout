@@ -262,7 +262,8 @@ void waitfg(pid_t pid, int output_fd)
  *     currently running children to terminate.  
  */
 void sigchld_handler(int sig) 
-{
+{	
+	
 	return;
 }
 
@@ -272,9 +273,20 @@ void sigchld_handler(int sig)
  *    to the foreground job.  
  */
 void sigint_handler(int sig) 
-{
+{	// trace 08
+	// SIGINT 가 입력되면, foreground 작업을 kill 한다.
+	
+	if(sig = 2){ // 일단 SIGINT가 발생되면 실습자료의 Signal 고유번호에 따라 sig에 2가 반환된다.
+	// SIGINT 가 발생하면 일단 Signal 의 처리과정에 따라서 kernal을 통해 자식프로세스에서 부모프로세스로 SIGINT 전달을 한다.
+	// 그 다음, SIGINT 핸들러를 통해 SIGINT를 처리한다 (자식 프로세스 kill)
+	// HINT에  따르면 kill(pid_t pit, int sig) 을 이용하여 다른 프로세스로 시그널을 전달한다.
+		kill(pid, sig);
+	}
+	else{ 
+		printf("Job [%d] (%d) terminated by signal 2",);
+	}
 	return;
-}
+}	
 
 /*
  * sigtstp_handler - The kernel sends a SIGTSTP to the shell whenever
