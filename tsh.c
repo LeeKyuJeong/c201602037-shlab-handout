@@ -252,6 +252,26 @@ int builtin_cmd(char **argv)
 		job->state = BG;
 		return 1;
 	}
+	if(!strcmp(cmd,"fg")){
+		if(argv[1][0] = '%'){
+			temp = argv[1][1];
+			job = getjobjid(jobs, temp-48);
+		}
+		else{
+			temp = atoi(argv[1]);
+			job = getjobpid(jobs,temp);
+		}
+		if(job!=NULL){
+			//waitfg(job->pid);
+			kill(job->pid,SIGCONT);
+			if(job->state!=ST)
+				deletejob(jobs,job->pid);
+
+		}
+		return 1;
+
+	}
+
 	return 0;
 
 }
