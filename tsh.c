@@ -171,55 +171,52 @@ void eval(char *cmdline)
 {
 	char *argv[MAXARGS];
 	char buf[MAXLINE];
-	// 백그라운드 작업에서는 보통 맨 뒤의 입력창에 &를 입력해준다.
-	// 확인을 했을 경우, 그것의 값을 넣어주기 위한 int형 변수를 선언한다.
+	pid_t pid;
 	int bg;
  	
+	sigset_t mask;
+
+	sigemptyset(&mask);
+	sigaddset(&mask,SIGCHLD);
+	sigaddset(&mask,SIGINT);
+	sigaddset(&mask,SIGTSTP);
+			
 	strcpy(buf, cmdline);
+
 	bg = parseline(buf, argv);
-	// parseline 에서는 마지막 인자가 '&' 이라면 1을 리턴한다. 그렇지 않으면 0을 반환한다.	
 	if(argv[0] == NULL)
-		return; 
-	// parseline에서 받아온 값을 저장한다.
-	pid_t pid = fork();	
-	// pid == 0 인경우 자식프로세스이다.
+		return;
+	
+	parseline(cmdline, argv);
 
 	if(!builtin_cmd(argv)){
-		if(pid == 0){ // 자식프로세스 일 경우
-			setpgid(0,0); // 이 함수를 사용하여 pid로 설정된 프로세스의 프로세스 그룹의 ID를 pgid로 설정한다.
-			// 자식 프로세스를 생성한 이후, setpgid (0,0) 을 통해 자식 프로세스의 그룹ID 를0 으로 설정해준다.
-
+		sigprocmask(SIG_BLOCK, &mask,NULL);
+		if((pid=fork()) < 0){
+			unix_error("fork error");
+		}
+		else if(pid == 0){ // 자식프로세스 일 경우
+			setpgid(0,0);
+			sigprocmask(SIG_UNBLOCK, &mask, NULL);
 			if((execve(argv[0], argv, environ) < 0)){
 				printf("%s : Command not found\n", argv[0]);
 				exit(0);
 			}
 		}
-		else if(pid < 0){ // 예외 처리 과정 (fork 로 프로세스 생성에 실패한 경우)
-			unix_error("fork error");
-		}
-
-		// addjob() 함수를 이용하여 joblist 에 job 을 추가한다.
-		if(!bg){ // foreground job 체크 
-			int status;
-			addjob(jobs, pid, FG, cmdline);
-			int checkWait = waitpid(pid, &status , 0);
-			if(checkWait < 0){
-				unix_error("error");
+	
+		else{
+			addjob(jobs,pid,(bg == 1 ? BG: FG),cmdline);
+			sigprocmask(SIG_UNBLOCK,&mask,NULL);
+			if(!bg){
+			
+			waitfg(pid,1);
+				
 			}
-			deletejob(jobs, pid);
-			// waitpid() 함수를 사용하여, 자식프로세스가 종료될 때 까지 기다린다.	
-			// waitpid() 함수의 형식은 waitpid(pid_t pid, int* intz, int option) 이다. 
-			// pid 에는 종료를 기다릴 자식의 pid를 넣는것이고, option에는 상세한 waitpid의 작동방식을 넣는다.(보통 0)
-			// intz 에는 종료 상태를 저장할 위치의 포인터 값을 넣는다.
-			// 그리고 waitpid() 함수의 반환값은 성공 시 pid 반환, 실패시 -1을 반환해준다.
-			// 조건에서 자식 프로세스가 종료될 까지 기다리라고 하였으므로 wait가 성공하였을 경우 작업을 제거하도록 한다.
+			else{
+				printf("(%d) (%d) %s",pid2jid(pid),pid,cmdline);
+		
+			}
 		}
-		else{ // background job 체크 
-			addjob(jobs, pid, BG, cmdline);
-			printf("(%d) (%d) %s",pid2jid(pid), pid, cmdline);
-			// 해당 작업의 정보를 출력하는 양식을 확인하고, 해당 양식에 맞추어 출력
-			// pid2jid() 함수를 이용해서 양식에 맞추어 출력
-		}
+		
 	}
 	return;
 }
@@ -235,10 +232,6 @@ int builtin_cmd(char **argv)
 	if(!strcmp(cmd, "&")){
 		return 1;
 	}
-	// quit 와 비슷하게 &를 찾도록 한다. 그리고 만약 찾으면 1을 반환하게 한다.
-
-	// trace07도 quit 명령어를 구현 한 것과 비슷하게 작성하면 된다.
-	// 이때, 필요한 함수는 listjobs()로 작업 리스트를 출력해주는 함수이다.
 	if(!strcmp(cmd,"jobs")){
 		listjobs(jobs,1);
 		return 1;
@@ -250,6 +243,22 @@ int builtin_cmd(char **argv)
 
 void waitfg(pid_t pid, int output_fd)
 {
+	struct job_t *j = getjobpid(jobs,pid);
+	char buf[MAXLINE];
+
+	if(!j)
+		return;
+	while(j->pid == pid && j->state == FG){
+		sleep(1);
+	}
+	if(verbose){
+		memset(buf,'\0',MAXLINE);
+		sprintf(buf,"waitfg: Process (%d) no longer the fg process:q\n",pid);
+		if(write(output_fd, buf, strlen(buf))<0){
+			fprintf(stderr, "Error writing to file\n");
+			exit(1);
+		}
+	}
 	return;
 }
 
@@ -266,6 +275,27 @@ void waitfg(pid_t pid, int output_fd)
  */
 void sigchld_handler(int sig)
 {
+	pid_t pid;
+	int status;
+	int olderrno = errno;
+	
+	while((pid = waitpid(-1 , &status, WNOHANG|WUNTRACED)) > 0){
+		if(WIFSTOPPED(status)){
+			printf("Job [%d] (%d) stopped by signal 20\n",pid2jid(pid),pid);
+			getjobpid(jobs,pid)->state = ST;
+		}
+		else if(WIFSIGNALED(status)){
+			printf("Job [%d] (%d) terminated by signal 2\n",pid2jid(pid),pid);
+			deletejob(jobs,pid);
+		}
+		else if(WIFEXITED(status)){
+			deletejob(jobs,pid);
+		}
+		else{
+			unix_error("waitpid error");
+		}
+	}
+	errno = olderrno;
 	return;
 }
 
@@ -280,18 +310,10 @@ void sigint_handler(int sig)
 	
 	pid_t pid ; // process ID
 	pid = fgpid(jobs); // fgpid() 메소드를 이용하여 foreground 작업의 pid를 저장하였다.
-    int jid = pid2jid(pid); // jid 저장
-	
-	if(pid!=0){ 
-	// SIGINT 가 발생하면 일단 Signal 의 처리과정에 따라서 kernal을 통해 자식프로세스에서 부모프로세스로 SIGINT 전달을 한다.
-	// 그 다음, SIGINT 핸들러를 통해 SIGINT를 처리한다 (자식 프로세스 kill)
-	// HINT에  따르면 kill(pid_t pit, int sig) 을 이용하여 다른 프로세스로 시그널을 전달한다.
-	// kill 에서 pid < 0 이면, pid 의 절대값 프로세스 그룹에 속하는 모든 프로세스에 시그널을 전달한다.
-		printf("Job [%d] (%d) terminated by signal 2\n", jid, pid);
-		kill(pid,SIGKILL);
-		deletejob(jobs,pid);
+
+	if (pid != 0) {
+		kill(-pid,SIGINT);
 	}
-	
 	return;
 }	
 
@@ -302,6 +324,11 @@ void sigint_handler(int sig)
  */
 void sigtstp_handler(int sig) 
 {
+	pid_t pid;
+	pid = fgpid(jobs);
+	if(pid!=0){	
+		kill(-pid,SIGTSTP);
+	}
 	return;
 }
 
