@@ -207,16 +207,12 @@ void eval(char *cmdline)
 			addjob(jobs,pid,(bg == 1 ? BG: FG),cmdline);
 			sigprocmask(SIG_UNBLOCK,&mask,NULL);
 			if(!bg){
-			
-			waitfg(pid,1);
-				
+				waitfg(pid,1);
 			}
 			else{
 				printf("(%d) (%d) %s",pid2jid(pid),pid,cmdline);
-		
 			}
 		}
-		
 	}
 	return;
 }
@@ -239,7 +235,7 @@ int builtin_cmd(char **argv)
 		return 1;
 	}
 	if(!strcmp(cmd,"bg")){
-		if(argv[1][0]= '%'){
+		if(argv[1][0] == '%'){
 			temp =  argv[1][1];
 			job =  getjobjid(jobs,temp-48);
 		}
@@ -253,7 +249,7 @@ int builtin_cmd(char **argv)
 		return 1;
 	}
 	if(!strcmp(cmd,"fg")){
-		if(argv[1][0] = '%'){
+		if(argv[1][0] == '%'){
 			temp = argv[1][1];
 			job = getjobjid(jobs, temp-48);
 		}
@@ -262,7 +258,6 @@ int builtin_cmd(char **argv)
 			job = getjobpid(jobs,temp);
 		}
 		if(job!=NULL){
-			//waitfg(job->pid);
 			kill(job->pid,SIGCONT);
 			if(job->state!=ST)
 				deletejob(jobs,job->pid);
@@ -312,7 +307,6 @@ void sigchld_handler(int sig)
 {
 	pid_t pid;
 	int status;
-	int olderrno = errno;
 	
 	while((pid = waitpid(-1 , &status, WNOHANG|WUNTRACED)) > 0){
 		if(WIFSTOPPED(status)){
@@ -330,7 +324,7 @@ void sigchld_handler(int sig)
 			unix_error("waitpid error");
 		}
 	}
-	errno = olderrno;
+
 	return;
 }
 
@@ -340,11 +334,10 @@ void sigchld_handler(int sig)
  *    to the foreground job.  
  */
 void sigint_handler(int sig) 
-{	// trace 08
-	// SIGINT 가 입력되면, foreground 작업을 kill 한다.
+{	
 	
-	pid_t pid ; // process ID
-	pid = fgpid(jobs); // fgpid() 메소드를 이용하여 foreground 작업의 pid를 저장하였다.
+	pid_t pid ; 
+	pid = fgpid(jobs); 
 
 	if (pid != 0) {
 		kill(-pid,SIGINT);
